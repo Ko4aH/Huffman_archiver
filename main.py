@@ -1,38 +1,43 @@
 #!/usr/bin/env python
 import os.path
 import sys
-import json
+import pickle
 import encoder
-
-SEGMENT_TO_ENCODE_SIZE = 1048576
-FILE_IS_LAST_FIELD = 1
-FILE_NAME_SIZE_FIELD = 1
-ENCODED_FILE_SIZE_FIELD = 5
-DATA_IN_SEGMENT_SIZE_FIELD = 3
-CODE_TABLE_SIZE_FIELD = 3
-HELP_MESSAGE = """
-Данная программа позволяет архивировать файл при помощи кода Хаффмана.
-Как пользоваться: 
-python <имя программы> <файл для архивации или деархивации> [-d] [-o <директория для выходного файла>]
-Используйте параметр -d для деархивации. Примеры использования:
-python main.py input.txt
-python main.py input.txt_archived -d
-"""
-# TODO: Надо добавить поддержку выбора директории для выходного файла
+from constants import *
 
 
 def main():
-    file_name = sys.argv[1]
-    if '-help' in sys.argv:
-        print(HELP_MESSAGE)
-    elif '-d' in sys.argv:
-        decode_file(file_name)
+    input_file_name = sys.argv[1]
+    for help_arg in HELPS:
+        if help_arg in sys.argv:
+            print(HELP_MESSAGE)
+            sys.exit()
+
+    if ('-d' in sys.argv and '-a' in sys.argv) or \
+            ('-d' not in sys.argv and '-a' not in sys.argv):
+        raise RuntimeError(SELECT_MODE_ERROR)
+
+    if '-d' in sys.argv:
+        count = sys.argv.index('-d')
+        if len(sys.argv) < count + 2:
+            raise RuntimeError(SPECIFY_DIR_ERROR)
+        output_file_dir = sys.argv[count + 1]
+        decode_file(input_file_name, output_file_dir)
     else:
-        encode_file(file_name)
+        output_file_name = ''
+        output_path_is_specified = False
+        count = sys.argv.index('-a')
+        if len(sys.argv) >= count + 2:
+            output_file_name = sys.argv[count + 1]
+            output_path_is_specified = True
+        encode_file(input_file_name, output_file_name, output_path_is_specified)
 
 
-def encode_file(input_file_name: str):
-    output_file_name = input_file_name + '_archived'
+def encode_file(input_file_name: str, output_file_name: str, output_path_is_specified: bool):
+    if not output_path_is_specified:
+        output_file_name = input_file_name + ARCHIVED_MARK
+    output_file_name = check_file_path(output_file_name, output_path_is_specified)
+
     byte_file_name = input_file_name.encode('utf-8')
     # На будущее, архивация нескольких файлов
     is_last_file = True
@@ -54,15 +59,43 @@ def encode_file(input_file_name: str):
 
     # Перезапись 5 байтов, нужно проверить, как оно работает
     with open(output_file_name, 'r+b') as result:
-        next_file_start_index = os.stat(output_file_name).st_size
+        encoded_file_size = os.stat(output_file_name).st_size
         result.seek(FILE_IS_LAST_FIELD + FILE_NAME_SIZE_FIELD + len(byte_file_name))
-        result.write(next_file_start_index.to_bytes(ENCODED_FILE_SIZE_FIELD, 'big'))
+        result.write(encoded_file_size.to_bytes(ENCODED_FILE_SIZE_FIELD, 'big'))
+
+
+def check_file_path(file_path: str, output_path_is_specified: bool):
+    # Проверка на дубликат файла
+    if os.path.exists(file_path):
+        file_path = raise_error_or_set_new_name(file_path, output_path_is_specified, FILE_NAME_IS_TAKEN_ERROR)
+
+    # Проверка на слишком длинное имя
+    try:
+        f = open(file_path, 'w')
+        f.close()
+        os.remove(file_path)
+    except OSError:
+        file_path = raise_error_or_set_new_name(file_path, output_path_is_specified, TOO_LONG_NAME_ERROR)
+    return file_path
+
+
+def raise_error_or_set_new_name(file_path: str, output_path_is_specified: bool, error_message: str):
+    if output_path_is_specified:
+        raise RuntimeError(error_message)
+    else:
+        count = 0
+        while os.path.exists(file_path):
+            directory, file = os.path.split(file_path)
+            file = str(count) + ARCHIVED_MARK
+            file_path = os.path.join(directory, file)
+            count += 1
+    return file_path
 
 
 def encode_segment(segment_to_encode: bytes):
     result = bytearray()
     output_byte_stream, code_table = encoder.encode(segment_to_encode)
-    serialized_table = json.dumps(code_table).encode('utf-8')
+    serialized_table = pickle.dumps(code_table)
     data_size = len(output_byte_stream)
     code_table_size = len(serialized_table)
     result += data_size.to_bytes(DATA_IN_SEGMENT_SIZE_FIELD, 'big')
@@ -72,21 +105,29 @@ def encode_segment(segment_to_encode: bytes):
     return result
 
 
-def decode_file(input_file_name: str):
+def decode_file(input_file_name: str, output_file_dir: str):
+    if not os.path.isdir(output_file_dir):
+        os.makedirs(output_file_dir)
     with open(input_file_name, 'rb') as f:
         # Добавить проверку, что файл последний
         is_last_file = bool.from_bytes(f.read(FILE_IS_LAST_FIELD), 'big')
         file_name_size = int.from_bytes(f.read(FILE_NAME_SIZE_FIELD), 'big')
         output_file_name = f.read(file_name_size).decode('utf-8')
-        next_file_start_index = int.from_bytes(f.read(ENCODED_FILE_SIZE_FIELD), 'big')
-        while f.tell() < next_file_start_index:
-            data_size = int.from_bytes(f.read(DATA_IN_SEGMENT_SIZE_FIELD), 'big')
-            code_table_size = int.from_bytes(f.read(CODE_TABLE_SIZE_FIELD), 'big')
-            encoded_byte_stream = f.read(data_size)
-            table_as_string = f.read(code_table_size).decode('utf-8')
-            code_table = json.loads(table_as_string)
-            decoded_data = encoder.decode(encoded_byte_stream, code_table)
-            with open(output_file_name, 'ab') as result:
+        encoded_file_size = int.from_bytes(f.read(ENCODED_FILE_SIZE_FIELD), 'big')
+        output_path = os.path.join(output_file_dir, output_file_name)
+        if os.path.exists(output_path):
+            raise RuntimeError(FILE_ALREADY_EXISTS_ERROR)
+        with open(output_path, 'ab') as result:
+            while f.tell() < encoded_file_size:
+                data_size = int.from_bytes(f.read(DATA_IN_SEGMENT_SIZE_FIELD), 'big')
+                code_table_size = int.from_bytes(f.read(CODE_TABLE_SIZE_FIELD), 'big')
+                encoded_byte_stream = f.read(data_size)
+                code_table = bytearray()
+                try:
+                    code_table = pickle.loads(f.read(code_table_size))
+                except:
+                    raise RuntimeError(FILE_IS_CORRUPTED_ERROR)
+                decoded_data = encoder.decode(encoded_byte_stream, code_table)
                 result.write(decoded_data)
 
 
