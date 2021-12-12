@@ -39,17 +39,14 @@ def encode_file(input_file_name: str, output_file_name: str, output_path_is_spec
     output_file_name = check_file_path(output_file_name, output_path_is_specified)
 
     byte_file_name = input_file_name.encode('utf-8')
-    # На будущее, архивация нескольких файлов
     is_last_file = True
 
     with open(output_file_name, 'ab') as result:
         result.write(is_last_file.to_bytes(1, 'big'))
         result.write(len(byte_file_name).to_bytes(FILE_NAME_SIZE_FIELD, 'big'))
         result.write(byte_file_name)
-        # Нужно будет добавить индекс начала следующего файла
         result.write(bytes(ENCODED_FILE_SIZE_FIELD))
         with open(input_file_name, 'rb') as input_file:
-            # Надо написать условие: пока входной файл не закончился
             while True:
                 segment_to_encode = input_file.read(SEGMENT_TO_ENCODE_SIZE)
                 if not segment_to_encode:
@@ -57,7 +54,6 @@ def encode_file(input_file_name: str, output_file_name: str, output_path_is_spec
                 encoded_segment = encode_segment(segment_to_encode)
                 result.write(encoded_segment)
 
-    # Перезапись 5 байтов, нужно проверить, как оно работает
     with open(output_file_name, 'r+b') as result:
         encoded_file_size = os.stat(output_file_name).st_size
         result.seek(FILE_IS_LAST_FIELD + FILE_NAME_SIZE_FIELD + len(byte_file_name))
@@ -109,7 +105,6 @@ def decode_file(input_file_name: str, output_file_dir: str):
     if not os.path.isdir(output_file_dir):
         os.makedirs(output_file_dir)
     with open(input_file_name, 'rb') as f:
-        # Добавить проверку, что файл последний
         is_last_file = bool.from_bytes(f.read(FILE_IS_LAST_FIELD), 'big')
         file_name_size = int.from_bytes(f.read(FILE_NAME_SIZE_FIELD), 'big')
         output_file_name = f.read(file_name_size).decode('utf-8')

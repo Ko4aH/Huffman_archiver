@@ -42,7 +42,6 @@ def build_tree(tree: dict[bytes, Leaf]):
             another_byte_with_min_count = find_byte_with_min_count(tree)
             set_code_for_byte(tree, byte_with_min_count, '0')
             set_code_for_byte(tree, another_byte_with_min_count, '1')
-            # Возможно, сработает неверно
             tree[byte_with_min_count + another_byte_with_min_count] = \
                 Leaf(tree[byte_with_min_count].count + tree[another_byte_with_min_count].count)
 
@@ -59,7 +58,6 @@ def all_leaves_are_used_in_tree(tree: dict[bytes, Leaf]):
 def find_byte_with_min_count(tree: dict[bytes, Leaf]):
     min_count = float('inf')
     byte_with_min_count = bytearray()
-    # Возможно, не заработает из-за перепутки leaf/symbol
     for byte in tree:
         if not tree[byte].is_used and tree[byte].count < min_count:
             min_count = tree[byte].count
@@ -77,8 +75,6 @@ def set_code_for_byte(tree: dict[bytes, Leaf], byte_pack: bytes, additional_bit:
 def translate_digits_to_bits(string: str):
     result = bytearray()
     for i in range(0, len(string), 8):
-        # Потенциально долгая операция, можно делать struct.pack
-        # Возможна ошибка синтаксиса to_bytes
         result += int(string[i:i + BITS_IN_BYTE], 2).to_bytes(1, 'big')
     return result
 
@@ -92,9 +88,7 @@ def decode(byte_stream: bytes, code_table: dict[str | bytes, str | int]):
 def translate_bits_to_digits(byte_stream: bytes):
     result = ''
     for byte in byte_stream:
-        # Не проверено
         code = format(byte, 'b')
-        # Возможна ошибка, написал по-новому
         significant_zeros = '0' * (BITS_IN_BYTE - len(code))
         code = significant_zeros + code
         result += code
@@ -102,8 +96,6 @@ def translate_bits_to_digits(byte_stream: bytes):
 
 
 def decode_string(string: str, code_table: dict[str | bytes, str | int]):
-    # Нужна проверка на ошибку декодирования, уже есть в js
-    # Возможна ошибка индексов
     count = 0
     result = bytearray()
     while count < len(string):
