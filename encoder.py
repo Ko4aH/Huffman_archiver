@@ -1,3 +1,5 @@
+import time
+
 from leaf import Leaf
 from constants import *
 
@@ -15,6 +17,7 @@ def encode(byte_stream: bytes):
         output_string += code_table[byte]
     leftover = BITS_IN_BYTE - len(output_string) % BITS_IN_BYTE
     output_string += '0' * leftover
+    code_table = {v: k for (k, v) in code_table.items()}
     code_table['bits added'] = leftover
     output_byte_stream = translate_digits_to_bits(output_string)
     return output_byte_stream, code_table
@@ -96,17 +99,15 @@ def translate_bits_to_digits(byte_stream: bytes):
 
 
 def decode_string(string: str, code_table: dict[str | bytes, str | int]):
-    count = 0
+    used_part_count = 0
     result = bytearray()
-    while count < len(string):
+    while used_part_count < len(string):
         is_error = True
-        for symbol in code_table:
-            bits_for_symbol = len(code_table[symbol])
-            if bits_for_symbol > len(string) - count:
-                continue
-            if code_table[symbol] == string[count:count + bits_for_symbol]:
-                result += symbol
-                count += bits_for_symbol
+        for i in range(len(string) - used_part_count + 1):
+            code = string[used_part_count:used_part_count + i]
+            if code in code_table:
+                result += code_table[code]
+                used_part_count += i
                 is_error = False
                 break
         if is_error:

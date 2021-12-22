@@ -2,6 +2,8 @@
 import os.path
 import sys
 import pickle
+import time
+
 import encoder
 from constants import *
 
@@ -34,6 +36,7 @@ def main():
 
 
 def encode_file(input_file_name: str, output_file_name: str, output_path_is_specified: bool):
+    # start = time.perf_counter()
     if not output_path_is_specified:
         output_file_name = input_file_name + ARCHIVED_MARK
     output_file_name = check_file_path(output_file_name, output_path_is_specified)
@@ -58,6 +61,9 @@ def encode_file(input_file_name: str, output_file_name: str, output_path_is_spec
         encoded_file_size = os.stat(output_file_name).st_size
         result.seek(FILE_IS_LAST_FIELD + FILE_NAME_SIZE_FIELD + len(byte_file_name))
         result.write(encoded_file_size.to_bytes(ENCODED_FILE_SIZE_FIELD, 'big'))
+
+    # end = time.perf_counter()
+    # print(f"Архивация: {end - start:0.4f} секунд")
 
 
 def check_file_path(file_path: str, output_path_is_specified: bool):
@@ -102,6 +108,7 @@ def encode_segment(segment_to_encode: bytes):
 
 
 def decode_file(input_file_name: str, output_file_dir: str):
+    # start = time.perf_counter()
     if not os.path.isdir(output_file_dir):
         os.makedirs(output_file_dir)
     with open(input_file_name, 'rb') as f:
@@ -124,6 +131,9 @@ def decode_file(input_file_name: str, output_file_dir: str):
                     raise RuntimeError(FILE_IS_CORRUPTED_ERROR)
                 decoded_data = encoder.decode(encoded_byte_stream, code_table)
                 result.write(decoded_data)
+
+    # end = time.perf_counter()
+    # print(f"Разархивация: {end - start:0.4f} секунд")
 
 
 if __name__ == '__main__':
