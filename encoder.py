@@ -43,7 +43,10 @@ def build_tree(tree: dict[bytes, Leaf]):
             set_code_for_byte(tree, byte_with_min_count, '0')
             set_code_for_byte(tree, another_byte_with_min_count, '1')
             tree[byte_with_min_count + another_byte_with_min_count] = \
-                Leaf(tree[byte_with_min_count].count + tree[another_byte_with_min_count].count)
+                Leaf(
+                    tree[byte_with_min_count].count +
+                    tree[another_byte_with_min_count].count
+                )
 
 
 def all_leaves_are_used_in_tree(tree: dict[bytes, Leaf]):
@@ -66,7 +69,8 @@ def find_byte_with_min_count(tree: dict[bytes, Leaf]):
     return bytes(byte_with_min_count)
 
 
-def set_code_for_byte(tree: dict[bytes, Leaf], byte_pack: bytes, additional_bit: str):
+def set_code_for_byte(tree: dict[bytes, Leaf],
+                      byte_pack: bytes, additional_bit: str):
     for i in range(len(byte_pack)):
         byte = byte_pack[i:i + 1]
         tree[byte].code = additional_bit + tree[byte].code

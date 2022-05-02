@@ -30,13 +30,18 @@ def main():
         if len(sys.argv) >= count + 2:
             output_file_name = sys.argv[count + 1]
             output_path_is_specified = True
-        encode_file(input_file_name, output_file_name, output_path_is_specified)
+        encode_file(input_file_name,
+                    output_file_name,
+                    output_path_is_specified)
 
 
-def encode_file(input_file_name: str, output_file_name: str, output_path_is_specified: bool):
+def encode_file(input_file_name: str,
+                output_file_name: str,
+                output_path_is_specified: bool):
     if not output_path_is_specified:
         output_file_name = input_file_name + ARCHIVED_MARK
-    output_file_name = check_file_path(output_file_name, output_path_is_specified)
+    output_file_name = check_file_path(output_file_name,
+                                       output_path_is_specified)
 
     byte_file_name = input_file_name.encode('utf-8')
     is_last_file = True
@@ -56,14 +61,19 @@ def encode_file(input_file_name: str, output_file_name: str, output_path_is_spec
 
     with open(output_file_name, 'r+b') as result:
         encoded_file_size = os.stat(output_file_name).st_size
-        result.seek(FILE_IS_LAST_FIELD + FILE_NAME_SIZE_FIELD + len(byte_file_name))
-        result.write(encoded_file_size.to_bytes(ENCODED_FILE_SIZE_FIELD, 'big'))
+        result.seek(FILE_IS_LAST_FIELD + FILE_NAME_SIZE_FIELD +
+                    len(byte_file_name))
+        result.write(
+            encoded_file_size.to_bytes(ENCODED_FILE_SIZE_FIELD, 'big')
+        )
 
 
 def check_file_path(file_path: str, output_path_is_specified: bool):
     # Проверка на дубликат файла
     if os.path.exists(file_path):
-        file_path = raise_error_or_set_new_name(file_path, output_path_is_specified, FILE_NAME_IS_TAKEN_ERROR)
+        file_path = raise_error_or_set_new_name(file_path,
+                                                output_path_is_specified,
+                                                FILE_NAME_IS_TAKEN_ERROR)
 
     # Проверка на слишком длинное имя
     try:
@@ -71,11 +81,15 @@ def check_file_path(file_path: str, output_path_is_specified: bool):
         f.close()
         os.remove(file_path)
     except OSError:
-        file_path = raise_error_or_set_new_name(file_path, output_path_is_specified, TOO_LONG_NAME_ERROR)
+        file_path = raise_error_or_set_new_name(file_path,
+                                                output_path_is_specified,
+                                                TOO_LONG_NAME_ERROR)
     return file_path
 
 
-def raise_error_or_set_new_name(file_path: str, output_path_is_specified: bool, error_message: str):
+def raise_error_or_set_new_name(file_path: str,
+                                output_path_is_specified: bool,
+                                error_message: str):
     if output_path_is_specified:
         raise RuntimeError(error_message)
     else:
@@ -108,14 +122,17 @@ def decode_file(input_file_name: str, output_file_dir: str):
         is_last_file = bool.from_bytes(f.read(FILE_IS_LAST_FIELD), 'big')
         file_name_size = int.from_bytes(f.read(FILE_NAME_SIZE_FIELD), 'big')
         output_file_name = f.read(file_name_size).decode('utf-8')
-        encoded_file_size = int.from_bytes(f.read(ENCODED_FILE_SIZE_FIELD), 'big')
+        encoded_file_size = int.from_bytes(
+            f.read(ENCODED_FILE_SIZE_FIELD), 'big')
         output_path = os.path.join(output_file_dir, output_file_name)
         if os.path.exists(output_path):
             raise RuntimeError(FILE_ALREADY_EXISTS_ERROR)
         with open(output_path, 'ab') as result:
             while f.tell() < encoded_file_size:
-                data_size = int.from_bytes(f.read(DATA_IN_SEGMENT_SIZE_FIELD), 'big')
-                code_table_size = int.from_bytes(f.read(CODE_TABLE_SIZE_FIELD), 'big')
+                data_size = int.from_bytes(
+                    f.read(DATA_IN_SEGMENT_SIZE_FIELD), 'big')
+                code_table_size = int.from_bytes(
+                    f.read(CODE_TABLE_SIZE_FIELD), 'big')
                 encoded_byte_stream = f.read(data_size)
                 code_table = bytearray()
                 try:
