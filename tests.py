@@ -1,6 +1,7 @@
 import os
 import unittest
 import main
+import file_worker
 from constants import *
 
 
@@ -47,22 +48,22 @@ class IncorrectArguments(unittest.TestCase):
     def test_large_output_file_name(self):
         large_name = 'large' * 100
         with self.assertRaises(RuntimeError):
-            main.encode_file(TEST_FILE, large_name, True)
+            file_worker.encode_file(TEST_FILE, large_name, True)
 
     def test_on_same_file_names(self):
         with self.assertRaises(RuntimeError):
-            main.encode_file(TEST_FILE, TEST_FILE, True)
+            file_worker.encode_file(TEST_FILE, TEST_FILE, True)
 
     def test_on_broken_archive(self):
         output_file = 'test_archive'
         decoded_dir = 'decoded'
-        main.encode_file(TEST_FILE, output_file, True)
+        file_worker.encode_file(TEST_FILE, output_file, True)
         with open(output_file, 'r+b') as f:
             middle_of_file = os.stat(output_file).st_size // 2
             f.seek(middle_of_file)
             f.write(b'some unexpected data')
         with self.assertRaises(RuntimeError):
-            main.decode_file(output_file, decoded_dir)
+            file_worker.decode_file(output_file, decoded_dir)
         os.remove(output_file)
         file_dir, file_name = os.path.split(TEST_FILE)
         decoded_file = os.path.join(file_dir, decoded_dir, file_name)
@@ -77,7 +78,7 @@ class OtherTests(unittest.TestCase):
             f1.write('Hello, world!')
         with open(archive_name, 'w') as f2:
             f2.write(data)
-        main.encode_file(TEST_FILE, archive_name, False)
+        file_worker.encode_file(TEST_FILE, archive_name, False)
         with open(archive_name, 'r') as f2:
             check_data = f2.read()
             self.assertTrue(data == check_data)
@@ -106,8 +107,8 @@ class SomeMethods:
         archived_file = file + ARCHIVED_MARK
         file_dir, file_name = os.path.split(file)
         dir_for_unarchived_file = os.path.join(file_dir, 'decoded')
-        main.encode_file(file, archived_file, specify_output_archive)
-        main.decode_file(archived_file, dir_for_unarchived_file)
+        file_worker.encode_file(file, archived_file, specify_output_archive)
+        file_worker.decode_file(archived_file, dir_for_unarchived_file)
         unarchived_file = os.path.join(dir_for_unarchived_file, file_name)
         result = SomeMethods.files_are_equal(file, unarchived_file)
         os.remove(file)
