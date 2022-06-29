@@ -14,7 +14,7 @@ class FileAfterUnzippingIsSame(unittest.TestCase):
             SomeMethods.check_if_file_and_unzipped_are_same(TEST_FILE, False))
 
     def test_on_empty_file(self):
-        empty_file = 'empty.tmp'
+        empty_file = '../empty.tmp'
         with open(empty_file, 'w') as f:
             f.write('Hello, world!')
         self.assertTrue(
@@ -28,7 +28,7 @@ class FileAfterUnzippingIsSame(unittest.TestCase):
             SomeMethods.check_if_file_and_unzipped_are_same(text_file))
 
     def test_on_bin_file(self):
-        bin_file = 'bytes.bin'
+        bin_file = '../bytes.bin'
         f = open(bin_file, 'wb')
         f.write(b'Hello, world!')
         f.close()
@@ -56,7 +56,7 @@ class IncorrectArguments(unittest.TestCase):
 
     def test_on_broken_archive(self):
         output_file = 'test_archive'
-        decoded_dir = 'decoded'
+        decoded_dir = '../decoded'
         file_worker.encode_file(TEST_FILE, output_file, True)
         with open(output_file, 'r+b') as f:
             middle_of_file = os.stat(output_file).st_size // 2
@@ -106,7 +106,7 @@ class SomeMethods:
                                             specify_output_archive=True):
         archived_file = file + ARCHIVED_MARK
         file_dir, file_name = os.path.split(file)
-        dir_for_unarchived_file = os.path.join(file_dir, 'decoded')
+        dir_for_unarchived_file = os.path.join(file_dir, '../decoded')
         file_worker.encode_file(file, archived_file, specify_output_archive)
         file_worker.decode_file(archived_file, dir_for_unarchived_file)
         unarchived_file = os.path.join(dir_for_unarchived_file, file_name)

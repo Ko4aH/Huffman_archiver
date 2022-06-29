@@ -1,7 +1,10 @@
 #!/usr/bin/env python
+import hashlib
 import os.path
 import sys
 import pickle
+import tkinter.filedialog
+
 import encoder
 from constants import *
 
@@ -75,6 +78,10 @@ def raise_error_or_set_new_name(file_path: str,
 
 def encode_segment(segment_to_encode: bytes):
     result = bytearray()
+    # hash_sum = hashlib.md5()
+    # hash_sum.update(segment_to_encode)
+    # result += hash_sum.digest_size.to_bytes(1, 'big')
+    # result += hash_sum.digest()
     output_byte_stream, code_table = encoder.encode(segment_to_encode)
     serialized_table = pickle.dumps(code_table)
     data_size = len(output_byte_stream)
@@ -100,6 +107,9 @@ def decode_file(input_file_name: str, output_file_dir: str):
             raise RuntimeError(FILE_ALREADY_EXISTS_ERROR)
         with open(output_path, 'ab') as result:
             while f.tell() < encoded_file_size:
+                # hash_sum_size = int.from_bytes(
+                #     f.read(1), 'big')
+                # hash_sum = f.read(hash_sum_size)
                 data_size = int.from_bytes(
                     f.read(DATA_IN_SEGMENT_SIZE_FIELD), 'big')
                 code_table_size = int.from_bytes(
@@ -111,5 +121,13 @@ def decode_file(input_file_name: str, output_file_dir: str):
                 except:
                     raise RuntimeError(FILE_IS_CORRUPTED_ERROR)
                 decoded_data = encoder.decode(encoded_byte_stream, code_table)
+                # hash_of_decoded = get_hash_sum(decoded_data)
+                # if hash_of_decoded != hash_sum:
+                #     raise RuntimeError(FILE_IS_CORRUPTED_ERROR)
                 result.write(decoded_data)
 
+
+def get_hash_sum(segment: bytes):
+    hash_sum = hashlib.md5()
+    hash_sum.update(segment)
+    return hash_sum.digest()

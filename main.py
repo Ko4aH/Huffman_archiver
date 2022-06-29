@@ -3,11 +3,14 @@ import os.path
 import sys
 import pickle
 import encoder
+import argparse
 import file_worker
 from constants import *
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-a', dest='output_file')
     input_file_name = sys.argv[1]
     for help_arg in HELPS:
         if help_arg in sys.argv:
@@ -32,8 +35,9 @@ def main():
             output_file_name = sys.argv[count + 1]
             output_path_is_specified = True
         file_worker.encode_file(input_file_name,
-                    output_file_name,
-                    output_path_is_specified)
+                                output_file_name,
+                                output_path_is_specified)
+
 
 if __name__ == '__main__':
     main()

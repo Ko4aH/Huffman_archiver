@@ -1,3 +1,5 @@
+import time
+
 from leaf import Leaf
 from constants import *
 
@@ -15,6 +17,7 @@ def encode(byte_stream: bytes):
         output_string += code_table[byte]
     leftover = BITS_IN_BYTE - len(output_string) % BITS_IN_BYTE
     output_string += '0' * leftover
+    code_table = {v: k for (k, v) in code_table.items()}
     code_table['bits added'] = leftover
     output_byte_stream = translate_digits_to_bits(output_string)
     return output_byte_stream, code_table
@@ -43,10 +46,7 @@ def build_tree(tree: dict[bytes, Leaf]):
             set_code_for_byte(tree, byte_with_min_count, '0')
             set_code_for_byte(tree, another_byte_with_min_count, '1')
             tree[byte_with_min_count + another_byte_with_min_count] = \
-                Leaf(
-                    tree[byte_with_min_count].count +
-                    tree[another_byte_with_min_count].count
-                )
+                Leaf(tree[byte_with_min_count].count + tree[another_byte_with_min_count].count)
 
 
 def all_leaves_are_used_in_tree(tree: dict[bytes, Leaf]):
@@ -69,8 +69,7 @@ def find_byte_with_min_count(tree: dict[bytes, Leaf]):
     return bytes(byte_with_min_count)
 
 
-def set_code_for_byte(tree: dict[bytes, Leaf],
-                      byte_pack: bytes, additional_bit: str):
+def set_code_for_byte(tree: dict[bytes, Leaf], byte_pack: bytes, additional_bit: str):
     for i in range(len(byte_pack)):
         byte = byte_pack[i:i + 1]
         tree[byte].code = additional_bit + tree[byte].code
@@ -100,17 +99,15 @@ def translate_bits_to_digits(byte_stream: bytes):
 
 
 def decode_string(string: str, code_table: dict[str | bytes, str | int]):
-    count = 0
+    used_part_count = 0
     result = bytearray()
-    while count < len(string):
+    while used_part_count < len(string):
         is_error = True
-        for symbol in code_table:
-            bits_for_symbol = len(code_table[symbol])
-            if bits_for_symbol > len(string) - count:
-                continue
-            if code_table[symbol] == string[count:count + bits_for_symbol]:
-                result += symbol
-                count += bits_for_symbol
+        for i in range(len(string) - used_part_count + 1):
+            code = string[used_part_count:used_part_count + i]
+            if code in code_table:
+                result += code_table[code]
+                used_part_count += i
                 is_error = False
                 break
         if is_error:
